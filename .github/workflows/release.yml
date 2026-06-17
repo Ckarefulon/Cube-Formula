@@ -1,0 +1,39 @@
+name: 自动发布 Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Changelog.md'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v3
+
+      - name: 提取最新版本号
+        id: get_version
+        run: |
+          VERSION=$(grep -m 1 -oE '[0-9]+\.[0-9]+\.[0-9]+' Changelog.md)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "提取到版本号: $VERSION"
+
+      - name: 提取该版本的更新内容
+        run: |
+          awk '/^## \[[0-9]+\.[0-9]+\.[0-9]+\]/{ if(!found){found=1; next} } found{ if(/^## \[/) exit; else print }' Changelog.md > RELEASE_BODY.md
+
+      - name: 创建 Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: 版本 ${{ env.VERSION }}
+          body_path: RELEASE_BODY.md
+          allowUpdates: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
