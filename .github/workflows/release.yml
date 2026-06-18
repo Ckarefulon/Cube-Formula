@@ -15,24 +15,60 @@ jobs:
 
     steps:
       - name: 拉取代码
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: 提取最新版本号
         id: get_version
         run: |
-          VERSION=$(grep -m 1 -oE '[0-9]+\.[0-9]+\.[0-9]+' Changelog.md)
+          VERSION=$(sed -nE 's/^## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/p' Changelog.md | head -n 1)
+          if [ -z "$VERSION" ]; then
+            echo "没有在 Changelog.md 中找到版本号"
+            exit 1
+          fi
+
+          MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1,2)
+          RELEASE_TAG="v$VERSION"
+
           echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "MAJOR_MINOR=$MAJOR_MINOR" >> $GITHUB_ENV
+          echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
+
           echo "提取到版本号: $VERSION"
+          echo "Release 显示标签: $RELEASE_TAG"
 
       - name: 提取该版本的更新内容
         run: |
           awk '/^## \[[0-9]+\.[0-9]+\.[0-9]+\]/{ if(!found){found=1; next} } found{ if(/^## \[/) exit; else print }' Changelog.md > RELEASE_BODY.md
 
-      - name: 创建 Release
-        uses: softprops/action-gh-release@v1
+      - name: 删除同主次版本的旧 Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          MAJOR_MINOR_REGEX=$(echo "$MAJOR_MINOR" | sed 's/\./\\./g')
+          VERSION_REGEX=$(echo "$VERSION" | sed 's/\./\\./g')
+
+          OLD_TAGS=$(gh release list --limit 100 --json tagName --jq '.[].tagName' \
+            | grep -E "^v?${MAJOR_MINOR_REGEX}(\.[0-9]+)?$" \
+            | grep -Ev "^v?${VERSION_REGEX}$" \
+            || true)
+
+          if [ -z "$OLD_TAGS" ]; then
+            echo "没有需要删除的同主次版本旧 Release"
+            exit 0
+          fi
+
+          echo "$OLD_TAGS" | while read -r TAG; do
+            if [ -n "$TAG" ]; then
+              echo "删除旧 Release: $TAG"
+              gh release delete "$TAG" --yes --cleanup-tag || true
+            fi
+          done
+
+      - name: 创建或更新当前 Release
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.VERSION }}
-          name: 版本 ${{ env.VERSION }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.VERSION }}
           body_path: RELEASE_BODY.md
           allowUpdates: true
         env:
