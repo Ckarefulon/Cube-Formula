@@ -36,9 +36,73 @@ jobs:
           echo "提取到版本号: $VERSION"
           echo "Release 显示标签: $RELEASE_TAG"
 
-      - name: 提取该版本的更新内容
+      - name: 提取并合并该版本线内的更新内容
         run: |
-          awk '/^## \[[0-9]+\.[0-9]+\.[0-9]+\]/{ if(!found){found=1; next} } found{ if(/^## \[/) exit; else print }' Changelog.md > RELEASE_BODY.md
+          python3 - <<'PY'
+          import re
+          import os
+          from collections import OrderedDict
+
+          version = os.environ['VERSION']
+          major_minor = os.environ['MAJOR_MINOR']
+
+          with open('Changelog.md', 'r', encoding='utf-8') as f:
+              content = f.read()
+
+          # 按版本标题切分，忽略第一个部分（Unreleased 之前的内容）
+          parts = re.split(r'\n## \[', content)
+          sections = []
+          for part in parts[1:]:
+              m = re.match(r'^([^\]]+)\]', part)
+              if m:
+                  sections.append((m.group(1), part))
+
+          # 收集同主次版本的版本记录（当前版本为文件中的最新版）
+          target_sections = []
+          for ver, body in sections:
+              vm = '.'.join(ver.split('.')[:2])
+              if vm == major_minor:
+                  target_sections.append((ver, body))
+
+          # 按旧到新排序
+          target_sections.reverse()
+
+          # 解析各版本的变更类型与条目
+          type_items = OrderedDict()
+          type_order = ['Added', 'Changed', 'Deprecated', 'Removed', 'Fixed', 'Security']
+
+          for ver, body in target_sections:
+              # 去掉版本标题行
+              body = re.sub(r'^[^\]]+\][^\n]*\n', '', body)
+              # 按类型小节切分
+              for tp in re.split(r'\n### ', body):
+                  tp = tp.strip()
+                  if not tp:
+                      continue
+                  lines = tp.split('\n')
+                  type_name = lines[0].strip()
+                  items = [line.strip()[2:] for line in lines[1:] if line.strip().startswith('- ')]
+                  if items:
+                      if type_name not in type_items:
+                          type_items[type_name] = []
+                      type_items[type_name].extend(items)
+
+          # 写入 Release 正文
+          with open('RELEASE_BODY.md', 'w', encoding='utf-8') as f:
+              for type_name in type_order:
+                  if type_name in type_items and type_items[type_name]:
+                      f.write(f'### {type_name}\n')
+                      for item in type_items[type_name]:
+                          f.write(f'- {item}\n')
+                      f.write('\n')
+              # 追加固定顺序之外的其他类型
+              for type_name, items in type_items.items():
+                  if type_name not in type_order and items:
+                      f.write(f'### {type_name}\n')
+                      for item in items:
+                          f.write(f'- {item}\n')
+                      f.write('\n')
+          PY
 
       - name: 删除同主次版本的旧 Release
         env:
