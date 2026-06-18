@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: 拉取代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 提取最新版本号
         id: get_version
@@ -65,11 +65,10 @@ jobs:
           done
 
       - name: 创建或更新当前 Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           name: ${{ env.VERSION }}
           body_path: RELEASE_BODY.md
-          allowUpdates: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
