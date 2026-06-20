@@ -590,32 +590,125 @@
 		}
 
 		.practiceControls {
-			grid-template-columns: minmax(0, 1fr) 132px;
+			grid-template-columns: minmax(0, 1fr) 144px;
 			align-items: stretch;
 		}
 
 		.practiceModeSelect {
+			position: relative;
+			width: 144px;
 			min-height: 42px;
-			width: 100%;
-			padding: 0 34px 0 12px;
 			border: 1px solid var(--controlBorder);
 			border-radius: 8px;
-			background:
-				linear-gradient(45deg, transparent 50%, var(--muted) 50%) calc(100% - 18px) 18px / 6px 6px no-repeat,
-				linear-gradient(135deg, var(--muted) 50%, transparent 50%) calc(100% - 12px) 18px / 6px 6px no-repeat,
-				var(--controlBg);
-			color: var(--controlText);
-			font: inherit;
-			font-weight: 700;
-			appearance: none;
-			cursor: pointer;
+			background: var(--controlBg);
 			transition: border-color 0.14s ease, box-shadow 0.14s ease, background-color 0.22s ease;
 		}
 
-		.practiceModeSelect:hover,
-		.practiceModeSelect:focus-visible {
-			border-color: var(--cyan);
-			box-shadow: 0 0 0 3px rgba(36, 240, 234, 0.10);
+		.practiceModeSelect.isOpen {
+			border-color: rgba(93, 78, 168, 0.45);
+			background: var(--surfaceSolid);
+			border-bottom-color: transparent;
+			border-radius: 8px 8px 0 0;
+		}
+
+		.practiceModeCurrent {
+			width: 100%;
+			min-height: 40px;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			padding: 0 12px;
+			border: 0;
+			border-radius: 7px;
+			background: transparent;
+			color: var(--controlText);
+			font: inherit;
+			font-weight: 700;
+			text-align: left;
+			cursor: pointer;
+		}
+
+		.practiceModeSelect.isOpen .practiceModeCurrent {
+			border-radius: 7px 7px 0 0;
+		}
+
+		.practiceModeCurrentText {
+			white-space: nowrap;
+		}
+
+		.practiceModeChevron {
+			width: 8px;
+			height: 8px;
+			margin-left: auto;
+			border-right: 2px solid currentColor;
+			border-bottom: 2px solid currentColor;
+			transform: rotate(45deg) translateY(-2px);
+			transition: transform 0.14s ease;
+		}
+
+		.practiceModeSelect.isOpen .practiceModeChevron {
+			transform: rotate(-135deg) translateY(-1px);
+		}
+
+		.practiceModeMenu {
+			position: absolute;
+			top: calc(100% - 1px);
+			left: -1px;
+			right: -1px;
+			display: grid;
+			gap: 0;
+			padding: 0;
+			border: 1px solid var(--line);
+			border-top: 0;
+			border-radius: 0 0 8px 8px;
+			background: var(--surfaceSolid);
+			box-shadow: 0 18px 34px rgba(36, 36, 54, 0.16);
+			opacity: 0;
+			visibility: hidden;
+			transform: translateY(-5px);
+			pointer-events: none;
+			transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
+			z-index: 5;
+		}
+
+		.practiceModeSelect.isOpen .practiceModeMenu {
+			opacity: 1;
+			visibility: visible;
+			transform: translateY(0);
+			pointer-events: auto;
+		}
+
+		.practiceModeOption {
+			width: 100%;
+			min-height: 42px;
+			display: flex;
+			align-items: center;
+			padding: 0 12px;
+			border: 0;
+			border-top: 1px solid var(--line);
+			border-radius: 0;
+			background: transparent;
+			color: var(--ink);
+			font: inherit;
+			font-weight: 700;
+			text-align: left;
+			cursor: pointer;
+			transition: background 0.14s ease, color 0.14s ease, transform 0.14s ease;
+		}
+
+		.practiceModeOption:first-child {
+			border-top: 0;
+		}
+
+		.practiceModeOption:last-child {
+			border-radius: 0 0 7px 7px;
+		}
+
+		.practiceModeOption:hover,
+		.practiceModeOption:focus-visible {
+			background: var(--controlHoverBg);
+			color: var(--controlText);
+			box-shadow: inset 2px 0 0 var(--cyan);
 			outline: none;
 		}
 
@@ -1358,6 +1451,12 @@
 			background: rgba(10, 10, 18, 0.42);
 			-webkit-backdrop-filter: blur(8px);
 			backdrop-filter: blur(8px);
+			opacity: 0;
+			transition: opacity 0.22s ease;
+		}
+
+		.formulaExportOverlay.isOpen {
+			opacity: 1;
 		}
 
 		.formulaExportDialog {
@@ -1370,6 +1469,14 @@
 			background: var(--surfaceSolid);
 			box-shadow: var(--shadow);
 			overflow: hidden;
+			opacity: 0;
+			transform: scale(0.94) translateY(12px);
+			transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+		}
+
+		.formulaExportOverlay.isOpen .formulaExportDialog {
+			opacity: 1;
+			transform: scale(1) translateY(0);
 		}
 
 		.formulaExportHeader,
@@ -2119,6 +2226,7 @@
 					});
 					document.addEventListener("click", function() {
 						self.closeModeMenu();
+						self.closePracticeModeMenu();
 					});
 				},
 
@@ -2132,6 +2240,39 @@
 					this.elements.modeSwitcher.classList.remove("isOpen");
 					this.elements.modeSwitcher.setAttribute("aria-expanded", "false");
 					this.elements.modeCurrent.setAttribute("aria-expanded", "false");
+				},
+
+				togglePracticeModeMenu: function() {
+					var element = this.elements.practiceModeSelect;
+					var isOpen = element.classList.toggle("isOpen");
+					element.querySelector(".practiceModeCurrent").setAttribute("aria-expanded", isOpen ? "true" : "false");
+				},
+
+				closePracticeModeMenu: function() {
+					var element = this.elements.practiceModeSelect;
+					if (element) {
+						element.classList.remove("isOpen");
+						element.querySelector(".practiceModeCurrent").setAttribute("aria-expanded", "false");
+					}
+				},
+
+				updatePracticeModeSelect: function() {
+					var element = this.elements.practiceModeSelect;
+					if (element) {
+						var meta = {
+							sequence: "顺序模式",
+							random: "随机模式",
+							loop: "循环模式"
+						};
+						var currentValue = this.practiceMode || "sequence";
+						element.querySelector(".practiceModeCurrentText").textContent = meta[currentValue] || meta.sequence;
+						var order = ["sequence", "random", "loop"].filter(function(item) {
+							return item !== currentValue;
+						});
+						element.querySelector(".practiceModeMenu").innerHTML = order.map(function(item) {
+							return '<button class="practiceModeOption" type="button" data-value="' + item + '" role="menuitem">' + meta[item] + '</button>';
+						}).join("");
+					}
 				},
 
 				getModeMeta: function(mode) {
@@ -2275,7 +2416,7 @@
 				},
 
 				getPracticePanelHtml: function() {
-					return '<aside class="panel practicePanel"><header class="panelHeader"><h1>训练模式</h1></header><section class="panelSection"><div class="controls practiceControls"><button id="connectBtn" class="button" type="button">连接魔方</button><select id="practiceModeSelect" class="practiceModeSelect" aria-label="练习切换模式"><option value="sequence">顺序模式</option><option value="random">随机模式</option></select></div></section><section class="panelSection"><div class="moves" id="orientationMoves" aria-label="整体旋转"><button class="moveButton rotation" type="button" data-move="x">x</button><button class="moveButton rotation" type="button" data-move="y">y</button><button class="moveButton rotation" type="button" data-move="z">z</button><button class="moveButton rotation" type="button" data-move="x&#39;">x&#39;</button><button class="moveButton rotation" type="button" data-move="y&#39;">y&#39;</button><button class="moveButton rotation" type="button" data-move="z&#39;">z&#39;</button></div></section>' + this.getMacHelpHtml() + this.getStateImportHtml(false, true) + this.getDiagnosticsHtml(true) + '</aside>';
+					return '<aside class="panel practicePanel"><header class="panelHeader"><h1>训练模式</h1></header><section class="panelSection"><div class="controls practiceControls"><button id="connectBtn" class="button" type="button">连接魔方</button><div id="practiceModeSelect" class="practiceModeSelect" aria-label="练习切换模式"><button class="practiceModeCurrent" type="button" aria-haspopup="true" aria-expanded="false"><span class="practiceModeCurrentText">顺序模式</span><span class="practiceModeChevron" aria-hidden="true"></span></button><div class="practiceModeMenu" role="menu"><button class="practiceModeOption" type="button" data-value="sequence" role="menuitem">顺序模式</button><button class="practiceModeOption" type="button" data-value="random" role="menuitem">随机模式</button><button class="practiceModeOption" type="button" data-value="loop" role="menuitem">循环模式</button></div></div></div></section><section class="panelSection"><div class="moves" id="orientationMoves" aria-label="整体旋转"><button class="moveButton rotation" type="button" data-move="x">x</button><button class="moveButton rotation" type="button" data-move="y">y</button><button class="moveButton rotation" type="button" data-move="z">z</button><button class="moveButton rotation" type="button" data-move="x&#39;">x&#39;</button><button class="moveButton rotation" type="button" data-move="y&#39;">y&#39;</button><button class="moveButton rotation" type="button" data-move="z&#39;">z&#39;</button></div></section>' + this.getMacHelpHtml() + this.getStateImportHtml(false, true) + this.getDiagnosticsHtml(true) + '</aside>';
 				},
 
 				getLibraryPanelHtml: function() {
@@ -2321,10 +2462,20 @@
 						});
 					});
 					this.bindOnce(this.elements.practiceModeSelect, "smartBound", function(element) {
-						element.value = self.practiceMode;
-						element.addEventListener("change", function(event) {
-							self.practiceMode = event.target.value === "random" ? "random" : "sequence";
-							self.randomBag = [];
+						self.updatePracticeModeSelect();
+						element.querySelector(".practiceModeCurrent").addEventListener("click", function(event) {
+							event.stopPropagation();
+							self.togglePracticeModeMenu();
+						});
+						element.querySelector(".practiceModeMenu").addEventListener("click", function(event) {
+							var option = event.target.closest("[data-value]");
+							if (option) {
+								var value = option.getAttribute("data-value");
+								self.practiceMode = value === "random" ? "random" : (value === "loop" ? "loop" : "sequence");
+								self.randomBag = [];
+								self.updatePracticeModeSelect();
+								self.closePracticeModeMenu();
+							}
 						});
 					});
 					this.bindOnce(this.elements.orientationMoves, "smartBound", function(element) {
@@ -3288,9 +3439,27 @@
 					var copyButton = document.getElementById("copyFormulaTextBtn");
 					var saveButton = document.getElementById("saveFormulaTextBtn");
 					textarea.value = text;
+					requestAnimationFrame(function() {
+						overlay.classList.add("isOpen");
+					});
 					textarea.focus();
+					var closeOverlay = function() {
+						overlay.classList.remove("isOpen");
+						var onTransitionEnd = function(event) {
+							if (event.target === overlay) {
+								overlay.removeEventListener("transitionend", onTransitionEnd);
+								overlay.remove();
+							}
+						};
+						overlay.addEventListener("transitionend", onTransitionEnd);
+						setTimeout(function() {
+							if (overlay.parentNode) {
+								overlay.remove();
+							}
+						}, 280);
+					};
 					document.getElementById("closeFormulaExportBtn").addEventListener("click", function() {
-						overlay.remove();
+						closeOverlay();
 					});
 					saveButton.addEventListener("click", function() {
 						var editedText = textarea.value;
@@ -3299,7 +3468,7 @@
 						} else {
 							self.applyFormulaExportText(editedText);
 						}
-						overlay.remove();
+						closeOverlay();
 					});
 					copyButton.addEventListener("click", function() {
 						var originalText = copyButton.textContent;
@@ -3332,6 +3501,18 @@
 							URL.revokeObjectURL(url);
 						}, 1000);
 					});
+					overlay.addEventListener("click", function(event) {
+						if (event.target === overlay) {
+							closeOverlay();
+						}
+					});
+					var onKeyDown = function(event) {
+						if (event.key === "Escape") {
+							closeOverlay();
+							document.removeEventListener("keydown", onKeyDown);
+						}
+					};
+					document.addEventListener("keydown", onKeyDown);
 				},
 
 				escapeHtml: function(value) {
@@ -3767,6 +3948,7 @@
 					this.thumbnailScenes = [];
 					this.elements.stateList.innerHTML = "";
 					var frag = document.createDocumentFragment();
+					var pendingPreviews = [];
 					this.importedStates.forEach(function(state, index) {
 						if (self.isPracticeMode) {
 							var practiceCard = document.createElement("div");
@@ -3780,7 +3962,7 @@
 							var practicePreview = document.createElement("div");
 							practicePreview.className = "statePreview";
 							practiceCard.appendChild(practicePreview);
-							self.renderStatePreview(practicePreview, state);
+							pendingPreviews.push({ container: practicePreview, state: state });
 							var practiceName = document.createElement("strong");
 							practiceName.className = "stateName";
 							practiceName.textContent = state.name;
@@ -3811,11 +3993,17 @@
 							var preview = document.createElement("div");
 							preview.className = "statePreview";
 							card.appendChild(preview);
-							self.renderStatePreview(preview, state);
+							pendingPreviews.push({ container: preview, state: state });
 						}
 						frag.appendChild(card);
 					});
 					this.elements.stateList.appendChild(frag);
+					// Defer preview rendering until the containers are attached to the
+					// live DOM so that TwistyScene.resize() can compute a non-zero size
+					// from the styled container.
+					pendingPreviews.forEach(function(entry) {
+						self.renderStatePreview(entry.container, entry.state);
+					});
 				},
 
 				getStateDisplayAlg: function(state) {
@@ -3944,11 +4132,15 @@
 						return;
 					}
 					this.solvedAdvancePending = true;
-					this.setImportStatus("已还原，0.7 秒后切换");
+					this.setImportStatus(this.practiceMode === "loop" ? "已还原，0.7 秒后循环" : "已还原，0.7 秒后切换");
 					this.solveSwitchTimer = setTimeout(function() {
 						self.solveSwitchTimer = null;
 						self.solvedAdvancePending = false;
-						self.advancePracticeState();
+						if (self.practiceMode === "loop") {
+							self.applyImportedState(self.currentStateIndex);
+						} else {
+							self.advancePracticeState();
+						}
 					}, 700);
 				},
 

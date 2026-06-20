@@ -17,8 +17,10 @@ jobs:
       - name: 拉取代码
         uses: actions/checkout@v5
 
-      - name: 提取最新版本号
+      - name: 提取最新版本号及上一版本号
         id: get_version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=$(sed -nE 's/^## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/p' Changelog.md | head -n 1)
           if [ -z "$VERSION" ]; then
@@ -26,14 +28,20 @@ jobs:
             exit 1
           fi
 
-          MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1,2)
+          PREV_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
+          PREV_VERSION=""
+          if [ -n "$PREV_TAG" ]; then
+            PREV_VERSION=$(echo "$PREV_TAG" | sed 's/^v//')
+          fi
+
           RELEASE_TAG="v$VERSION"
 
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "MAJOR_MINOR=$MAJOR_MINOR" >> $GITHUB_ENV
+          echo "PREV_VERSION=$PREV_VERSION" >> $GITHUB_ENV
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
 
           echo "提取到版本号: $VERSION"
+          echo "上一个 Release: $PREV_VERSION"
           echo "Release 显示标签: $RELEASE_TAG"
 
       - name: 提取并合并该版本线内的更新内容
@@ -44,7 +52,8 @@ jobs:
           from collections import OrderedDict
 
           version = os.environ['VERSION']
-          major_minor = os.environ['MAJOR_MINOR']
+          prev_version = os.environ.get('PREV_VERSION', '')
+          current_mm = '.'.join(version.split('.')[:2])
 
           with open('Changelog.md', 'r', encoding='utf-8') as f:
               content = f.read()
@@ -61,7 +70,7 @@ jobs:
           target_sections = []
           for ver, body in sections:
               vm = '.'.join(ver.split('.')[:2])
-              if vm == major_minor:
+              if vm == current_mm:
                   target_sections.append((ver, body))
 
           # 按旧到新排序
@@ -89,6 +98,12 @@ jobs:
 
           # 写入 Release 正文
           with open('RELEASE_BODY.md', 'w', encoding='utf-8') as f:
+              # 二级标题：上一版本 → 本版本
+              if prev_version:
+                  f.write(f'## {prev_version} → {version}\n\n')
+              else:
+                  f.write(f'## {version}\n\n')
+
               for type_name in type_order:
                   if type_name in type_items and type_items[type_name]:
                       f.write(f'### {type_name}\n')
@@ -103,30 +118,6 @@ jobs:
                           f.write(f'- {item}\n')
                       f.write('\n')
           PY
-
-      - name: 删除同主次版本的旧 Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          MAJOR_MINOR_REGEX=$(echo "$MAJOR_MINOR" | sed 's/\./\\./g')
-          VERSION_REGEX=$(echo "$VERSION" | sed 's/\./\\./g')
-
-          OLD_TAGS=$(gh release list --limit 100 --json tagName --jq '.[].tagName' \
-            | grep -E "^v?${MAJOR_MINOR_REGEX}(\.[0-9]+)?$" \
-            | grep -Ev "^v?${VERSION_REGEX}$" \
-            || true)
-
-          if [ -z "$OLD_TAGS" ]; then
-            echo "没有需要删除的同主次版本旧 Release"
-            exit 0
-          fi
-
-          echo "$OLD_TAGS" | while read -r TAG; do
-            if [ -n "$TAG" ]; then
-              echo "删除旧 Release: $TAG"
-              gh release delete "$TAG" --yes --cleanup-tag || true
-            fi
-          done
 
       - name: 创建或更新当前 Release
         uses: softprops/action-gh-release@v3
