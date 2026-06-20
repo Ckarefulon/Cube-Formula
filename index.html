@@ -2770,6 +2770,12 @@
 					hint.textContent = "拖动旋转视角，点击贴纸切换同区域同类贴纸 · 已隐藏 " + count + " 张";
 				},
 
+				applyHiddenStickerMaskToThumbnails: function() {
+					for (var i = 0; i < this.thumbnailScenes.length; i++) {
+						this.applyHiddenStickerMask(this.thumbnailScenes[i], this.hiddenStickerMask);
+					}
+				},
+
 				copyTwistyState: function(sourceScene, targetScene) {
 					var source = sourceScene && sourceScene.getTwisty && sourceScene.getTwisty();
 					var target = targetScene && targetScene.getTwisty && targetScene.getTwisty();
@@ -2829,6 +2835,7 @@
 					document.getElementById("confirmCustomStateBtn").addEventListener("click", function() {
 						self.hiddenStickerMask = self.cloneStickerMask(self.customCubeDraftMask);
 						self.applyHiddenStickerMask(self.twistyScene, self.hiddenStickerMask);
+						self.applyHiddenStickerMaskToThumbnails();
 						closeDialog();
 					});
 					overlay.addEventListener("click", function(event) {
@@ -4459,10 +4466,12 @@
 						allowDragging: false,
 						faceColors: [0xffffff, 0xf05a3b, 0x2dbb70, 0xffd447, 0xff941f, 0x2f69df]
 					});
+					this.prepareStickerScene(previewScene);
 					var moves = this.buildTwistyMoves(state.moves, false);
 					if (moves.length) {
 						previewScene.applyMoves(moves);
 					}
+					this.applyHiddenStickerMask(previewScene, this.hiddenStickerMask);
 					previewScene.resize();
 					this.thumbnailScenes.push(previewScene);
 					if (previewScene.setViewDrag) {
