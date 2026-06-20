@@ -1,0 +1,53 @@
+name: 部署到 Ckarefulon.github.io
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: 拉取本仓库代码
+        uses: actions/checkout@v5
+
+      - name: 拉取目标仓库代码
+        uses: actions/checkout@v5
+        with:
+          repository: Ckarefulon/Ckarefulon.github.io
+          token: ${{ secrets.TARGET_REPO_TOKEN }}
+          path: target-repo
+
+      - name: 清空目标目录并复制文件
+        run: |
+          TARGET_DIR="target-repo/Cube/Formula"
+
+          # 创建目标目录（如果不存在）
+          mkdir -p "$TARGET_DIR"
+
+          # 删除目标目录中的所有文件（保留 .git 目录）
+          find "$TARGET_DIR" -mindepth 1 -not -name '.git' -exec rm -rf {} + 2>/dev/null || true
+
+          # 复制本仓库文件到目标目录，排除 . 开头的文件夹和 favicon.svg
+          rsync -av \
+            --exclude='.*' \
+            --exclude='favicon.svg' \
+            --exclude='target-repo' \
+            ./ "$TARGET_DIR/"
+
+      - name: 提交并推送
+        run: |
+          cd target-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "没有变更，跳过提交"
+          else
+            git commit -m "从 Cube-Formula 自动同步 [skip ci]"
+            git push
+          fi
