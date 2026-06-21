@@ -2160,6 +2160,7 @@
 				macWarningVisible: false,
 				cubeDimension: 3,
 				orientationMatrix: null,
+				orientationMoves: [],
 				viewYaw: 0,
 				viewPitch: 0,
 				hiddenStickerMask: {},
@@ -2235,6 +2236,7 @@
 					this.elements.cubeStage.innerHTML = "";
 					this.elements.cubeStage.dataset.roll = "0";
 					this.orientationMatrix = this.identityMatrix();
+					this.orientationMoves = [];
 					this.viewYaw = 0;
 					this.viewPitch = 0;
 					this.twistyScene = new twistyjs.TwistyScene();
@@ -2870,6 +2872,19 @@
 							faceColors: [0xffffff, 0xf05a3b, 0x2dbb70, 0xffd447, 0xff941f, 0x2f69df]
 						});
 						self.prepareStickerScene(self.customCubeScene);
+						if (self.orientationMoves.length > 0) {
+							var orientTwistyMoves = [];
+							for (var oi = 0; oi < self.orientationMoves.length; oi++) {
+								var om = self.normalizeMove(self.orientationMoves[oi]);
+								if (om) {
+									om = self.mapManualMove(om);
+									orientTwistyMoves.push(om.twisty);
+								}
+							}
+							if (orientTwistyMoves.length > 0) {
+								self.customCubeScene.applyMoves(orientTwistyMoves);
+							}
+						}
 						self.customStickerGroups = self.buildStickerGroupsForScene(self.customCubeScene);
 						if (self.twistyScene.getViewState && self.customCubeScene.setViewState) {
 							self.customCubeScene.setViewState(self.twistyScene.getViewState());
@@ -4788,6 +4803,7 @@
 						}
 						if (updateOrientationState && move.type === "orientation") {
 							this.updateOrientation(move.axis, move.pow);
+							this.orientationMoves.push(move.text);
 						}
 					}
 					return moves;
@@ -5427,6 +5443,7 @@
 						this.twistyScene.addMoves([move.twisty]);
 					}
 					this.updateOrientation(move.axis, move.pow);
+					this.orientationMoves.push(move.text);
 				},
 
 				rollView: function(direction) {
