@@ -15,16 +15,15 @@ jobs:
       - name: 拉取本仓库代码
         uses: actions/checkout@v5
 
-      - name: 检查是否为 Beta 版本（Beta 版本不自动部署）
+      - name: 检查是否为 Beta 版本
         run: |
           VERSION=$(sed -nE 's/^## \[([0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?)\].*/\1/p' Changelog.md | head -n 1)
           if echo "$VERSION" | grep -q "\-beta"; then
-            echo "检测到 Beta 版本: $VERSION，跳过自动部署"
-            echo "SKIP_DEPLOY=true" >> $GITHUB_ENV
+            echo "检测到 Beta 版本: $VERSION，将部署到 Beta 目录"
+            echo "IS_BETA=true" >> $GITHUB_ENV
           fi
 
       - name: 拉取目标仓库代码
-        if: env.SKIP_DEPLOY != 'true'
         uses: actions/checkout@v5
         with:
           repository: Ckarefulon/Ckarefulon.github.io
@@ -32,9 +31,12 @@ jobs:
           path: target-repo
 
       - name: 清空目标目录并复制文件
-        if: env.SKIP_DEPLOY != 'true'
         run: |
-          TARGET_DIR="target-repo/Cube/Formula"
+          if [ "$IS_BETA" = "true" ]; then
+            TARGET_DIR="target-repo/Cube/Formula/Beta"
+          else
+            TARGET_DIR="target-repo/Cube/Formula"
+          fi
 
           # 创建目标目录（如果不存在）
           mkdir -p "$TARGET_DIR"
@@ -50,7 +52,6 @@ jobs:
             ./ "$TARGET_DIR/"
 
       - name: 提交并推送
-        if: env.SKIP_DEPLOY != 'true'
         run: |
           cd target-repo
           git config user.name "github-actions[bot]"
