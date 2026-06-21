@@ -334,11 +334,71 @@
 		if (!current) {
 			return;
 		}
+		var learnedCount = memory.data.day.learnedIds.length;
+		var dailyCount = memory.data.settings.dailyCount;
+		if (learnedCount >= dailyCount && dailyCount > 0) {
+			renderCompletionCalendar(current);
+			return;
+		}
 		current.innerHTML = '<button id="memoryBackBtn" class="memoryBack" type="button" aria-label="返回上一公式" title="返回上一公式"><span class="memoryBackChevron" aria-hidden="true"></span></button><button id="memoryPrompt" class="memoryPrompt" type="button">请开始还原…<br>点击此处显示答案。</button>';
 		var history = document.getElementById("memoryHistory");
 		if (history) {
 			history.innerHTML = '<div class="memoryEmptyHistory">' + (memory.data.formulas.length ? "今日没有待学习公式" : "请先规划学习公式") + '</div>';
 		}
+	}
+
+	function renderCompletionCalendar(current) {
+		var studyDates = {};
+		var formulas = memory.data.formulas || [];
+		for (var i = 0; i < formulas.length; i++) {
+			var progress = getProgress(formulas[i].id);
+			var attempts = progress.attempts || [];
+			for (var j = 0; j < attempts.length; j++) {
+				var date = attempts[j].studyDate;
+				if (date) {
+					studyDates[date] = (studyDates[date] || 0) + 1;
+				}
+			}
+		}
+		var dates = Object.keys(studyDates).sort();
+		if (!dates.length) {
+			current.innerHTML = '<div class="memoryCompletion"><h2>今日计划已完成</h2><p>暂无学习记录</p></div>';
+			var history = document.getElementById("memoryHistory");
+			if (history) { history.innerHTML = ""; }
+			return;
+		}
+		var months = {};
+		for (var k = 0; k < dates.length; k++) {
+			var month = dates[k].slice(0, 7);
+			if (!months[month]) { months[month] = {}; }
+			months[month][dates[k]] = studyDates[dates[k]];
+		}
+		var monthKeys = Object.keys(months).sort();
+		var calendarHtml = [];
+		for (var m = 0; m < monthKeys.length; m++) {
+			var monthKey = monthKeys[m];
+			var parts = monthKey.split("-");
+			var year = parseInt(parts[0], 10);
+			var mon = parseInt(parts[1], 10);
+			var daysInMonth = new Date(year, mon, 0).getDate();
+			var firstDow = new Date(year, mon - 1, 1).getDay();
+			var monthDays = months[monthKey];
+			calendarHtml.push('<div class="memoryCalendarMonth"><div class="memoryCalendarTitle">' + year + '年' + mon + '月</div><div class="memoryCalendarGrid">');
+			calendarHtml.push('<span class="memoryCalendarDow">日</span><span class="memoryCalendarDow">一</span><span class="memoryCalendarDow">二</span><span class="memoryCalendarDow">三</span><span class="memoryCalendarDow">四</span><span class="memoryCalendarDow">五</span><span class="memoryCalendarDow">六</span>');
+			for (var d = 0; d < firstDow; d++) {
+				calendarHtml.push('<span class="memoryCalendarDay isPlaceholder"></span>');
+			}
+			for (var day = 1; day <= daysInMonth; day++) {
+				var dateKey = monthKey + "-" + String(day).padStart(2, "0");
+				var isDone = !!monthDays[dateKey];
+				calendarHtml.push('<span class="memoryCalendarDay' + (isDone ? ' isDone' : '') + '">' + day + '</span>');
+			}
+			calendarHtml.push('</div></div>');
+		}
+		var totalDays = dates.length;
+		current.innerHTML = '<div class="memoryCompletion"><h2>今日计划已完成</h2><p class="memoryCompletionSub">累计学习 ' + totalDays + ' 天</p><div class="memoryCalendar">' + calendarHtml.join("") + '</div></div>';
+		var history = document.getElementById("memoryHistory");
+		if (history) { history.innerHTML = ""; }
 	}
 
 	function renderHiddenMemory(solving) {
@@ -717,10 +777,6 @@
 	}
 
 	function goBackPrevious() {
-		if (memory.state !== "answer") {
-			showToast("显示答案后才能返回上一公式");
-			return;
-		}
 		var stack = memory.data.undoStack || [];
 		if (!stack.length) {
 			showToast("没有上一公式");
