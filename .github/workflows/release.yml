@@ -22,13 +22,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION=$(sed -nE 's/^## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/p' Changelog.md | head -n 1)
+          VERSION=$(sed -nE 's/^## \[([0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?)\].*/\1/p' Changelog.md | head -n 1)
           if [ -z "$VERSION" ]; then
             echo "没有在 Changelog.md 中找到版本号"
             exit 1
           fi
 
-          PREV_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
+          PREV_TAG=$(gh release list --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
           PREV_VERSION=""
           if [ -n "$PREV_TAG" ]; then
             PREV_VERSION=$(echo "$PREV_TAG" | sed 's/^v//')
@@ -43,6 +43,14 @@ jobs:
           echo "提取到版本号: $VERSION"
           echo "上一个 Release: $PREV_VERSION"
           echo "Release 显示标签: $RELEASE_TAG"
+
+          if echo "$VERSION" | grep -q "\-beta"; then
+            echo "IS_BETA=true" >> $GITHUB_ENV
+            echo "检测到 Beta 版本"
+          else
+            echo "IS_BETA=false" >> $GITHUB_ENV
+            echo "检测到正式版本"
+          fi
 
       - name: 提取并合并该版本线内的更新内容
         run: |
@@ -125,5 +133,7 @@ jobs:
           tag_name: ${{ env.RELEASE_TAG }}
           name: ${{ env.VERSION }}
           body_path: RELEASE_BODY.md
+          prerelease: ${{ env.IS_BETA == 'true' }}
+          make_latest: ${{ env.IS_BETA != 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
