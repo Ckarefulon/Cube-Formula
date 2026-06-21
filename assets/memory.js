@@ -843,8 +843,12 @@
 		overlay.querySelectorAll("[data-memory-close]").forEach(function(button) {
 			button.addEventListener("click", function() { closeOverlay(overlay); });
 		});
-		overlay.addEventListener("click", function(event) {
-			if (event.target === overlay) {
+		var pressedInsideDialog = false;
+		overlay.addEventListener("mousedown", function(event) {
+			pressedInsideDialog = event.target !== overlay;
+		});
+		overlay.addEventListener("mouseup", function(event) {
+			if (event.target === overlay && !pressedInsideDialog) {
 				closeOverlay(overlay);
 			}
 		});

@@ -2325,7 +2325,17 @@
 							self.playMove(event.shiftKey ? move + "'" : move, "keyboard", Date.now());
 						}
 					});
-					document.addEventListener("click", function() {
+					var pressInsideMenuContainer = null;
+					document.addEventListener("mousedown", function(event) {
+						var inMode = self.elements.modeSwitcher.contains(event.target);
+						var inPractice = self.elements.practiceModeSelect && self.elements.practiceModeSelect.contains(event.target);
+						pressInsideMenuContainer = inMode ? "mode" : (inPractice ? "practice" : null);
+					});
+					document.addEventListener("mouseup", function() {
+						if (pressInsideMenuContainer) {
+							pressInsideMenuContainer = null;
+							return;
+						}
 						self.closeModeMenu();
 						self.closePracticeModeMenu();
 					});
@@ -2838,8 +2848,12 @@
 						self.applyHiddenStickerMaskToThumbnails();
 						closeDialog();
 					});
-					overlay.addEventListener("click", function(event) {
-						if (event.target === overlay) {
+					var pressedInsideDialog = false;
+					overlay.addEventListener("mousedown", function(event) {
+						pressedInsideDialog = event.target !== overlay;
+					});
+					overlay.addEventListener("mouseup", function(event) {
+						if (event.target === overlay && !pressedInsideDialog) {
 							closeDialog();
 						}
 					});
@@ -3925,8 +3939,12 @@
 							URL.revokeObjectURL(url);
 						}, 1000);
 					});
-					overlay.addEventListener("click", function(event) {
-						if (event.target === overlay) {
+					var pressedInsideDialog = false;
+					overlay.addEventListener("mousedown", function(event) {
+						pressedInsideDialog = event.target !== overlay;
+					});
+					overlay.addEventListener("mouseup", function(event) {
+						if (event.target === overlay && !pressedInsideDialog) {
 							closeOverlay();
 						}
 					});
