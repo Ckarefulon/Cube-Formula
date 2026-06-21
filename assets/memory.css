@@ -11,36 +11,18 @@
 	overflow: hidden;
 }
 
-.memoryPanel .panelHeader {
-	padding-bottom: 12px;
+.memoryPanel .panelSection {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
 }
 
-.memoryToolbar {
-	display: grid;
-	flex: 0 0 auto;
-	gap: 8px;
-	padding: 0 16px 12px;
-	border-bottom: 1px solid var(--line);
-}
-
-.memoryToolbarRow {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 8px;
-}
-
-.memoryToolbar > .button,
-.memoryToolbarRow .button {
+.memoryPanel .panelSection > .button {
 	width: 100%;
 }
 
 .memoryPlanMeta {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	align-items: center;
-	gap: 10px;
-	color: var(--muted);
-	font-size: 12px;
+	display: none;
 }
 
 .memoryDailyInput {
@@ -80,17 +62,27 @@
 	width: 30px;
 	height: 30px;
 	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	border: 1px solid var(--controlBorder);
 	border-radius: 50%;
 	background: var(--controlBg);
 	color: var(--controlText);
 	cursor: pointer;
-	font-size: 18px;
-	line-height: 1;
 }
 
 .memoryBack:hover {
 	border-color: #24f0ea;
+}
+
+.memoryBackChevron {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	border-left: 2px solid currentColor;
+	border-bottom: 2px solid currentColor;
+	transform: rotate(45deg) translateX(2px);
 }
 
 .memoryPrompt {
@@ -193,10 +185,6 @@
 	box-shadow: 0 0 0 1px color-mix(in srgb, var(--memoryColor) 28%, transparent);
 }
 
-.memoryConfirm {
-	width: 100%;
-}
-
 .memoryHistory {
 	min-height: 0;
 	padding: 10px 12px;
@@ -218,13 +206,13 @@
 }
 
 .memoryDayList {
-	display: grid;
+	display: flex;
+	flex-wrap: wrap;
 	gap: 6px;
 }
 
 .memoryDay {
-	min-height: 32px;
-	display: flex;
+	display: inline-flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 8px;
@@ -233,6 +221,7 @@
 	border-radius: 8px;
 	background: color-mix(in srgb, var(--dayColor, var(--line)) 8%, transparent);
 	font-size: 12px;
+	white-space: nowrap;
 }
 
 .memoryDay.isStatus {
@@ -288,6 +277,29 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: 10px;
+}
+
+.memoryDialogBottom {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	padding: 10px 0;
+	border-top: 1px solid var(--line);
+	border-bottom: 1px solid var(--line);
+}
+
+.memoryDailyLabel {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--muted);
+	font-size: 13px;
+}
+
+.memoryPlanCount {
+	color: var(--muted);
+	font-size: 12px;
 }
 
 .memoryDialog p {

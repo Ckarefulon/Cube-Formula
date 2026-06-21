@@ -252,10 +252,8 @@
 
 	function getMemoryPanelHtml() {
 		return '<aside class="panel memoryPanel"><header class="panelHeader"><h1>记忆模式</h1></header>' +
-			'<section class="memoryToolbar"><div class="memoryToolbarRow"><button id="connectBtn" class="button" type="button">连接魔方</button><button id="customFinalStateBtn" class="button secondary" type="button">最终状态</button></div>' +
-			'<button id="memoryPlanBtn" class="button" type="button">规划学习</button><div class="memoryToolbarRow"><button id="memoryImportBtn" class="button secondary" type="button">导入数据</button><button id="memoryExportBtn" class="button secondary" type="button">导出数据</button></div><input id="memoryImportFile" class="hiddenFileInput" type="file" accept=".json,application/json">' +
-			'<div class="memoryPlanMeta"><span id="memoryPlanCount">[0]/[10]</span><label>每日公式数 <input id="memoryDailyCount" class="memoryDailyInput" type="number" min="1" max="999" value="10"></label></div></section>' +
-			'<section class="memoryArea"><div id="memoryCurrent" class="memoryCurrent"><button id="memoryBackBtn" class="memoryBack" type="button" aria-label="返回上一公式" title="返回上一公式">↶</button><button id="memoryPrompt" class="memoryPrompt" type="button">请开始还原…<br>点击此处显示答案。</button></div><div id="memoryHistory" class="memoryHistory"></div></section>' +
+			'<section class="panelSection"><div class="controls"><button id="connectBtn" class="button" type="button">连接魔方</button><button id="customFinalStateBtn" class="button secondary" type="button">最终状态</button></div><button id="memoryPlanBtn" class="button" type="button">规划学习</button><div class="controls"><button id="memoryImportBtn" class="button secondary" type="button">导入数据</button><button id="memoryExportBtn" class="button secondary" type="button">导出数据</button></div><input id="memoryImportFile" class="hiddenFileInput" type="file" accept=".json,application/json"></section>' +
+			'<section class="memoryArea"><div id="memoryCurrent" class="memoryCurrent"><button id="memoryBackBtn" class="memoryBack" type="button" aria-label="返回上一公式" title="返回上一公式"><span class="memoryBackChevron" aria-hidden="true"></span></button><button id="memoryPrompt" class="memoryPrompt" type="button">请开始还原…<br>点击此处显示答案。</button></div><div id="memoryHistory" class="memoryHistory"></div></section>' +
 			app.getDiagnosticsHtml(true) + '</aside>';
 	}
 
@@ -336,7 +334,7 @@
 		if (!current) {
 			return;
 		}
-		current.innerHTML = '<button id="memoryBackBtn" class="memoryBack" type="button" aria-label="返回上一公式" title="返回上一公式">↶</button><button id="memoryPrompt" class="memoryPrompt" type="button">请开始还原…<br>点击此处显示答案。</button>';
+		current.innerHTML = '<button id="memoryBackBtn" class="memoryBack" type="button" aria-label="返回上一公式" title="返回上一公式"><span class="memoryBackChevron" aria-hidden="true"></span></button><button id="memoryPrompt" class="memoryPrompt" type="button">请开始还原…<br>点击此处显示答案。</button>';
 		var history = document.getElementById("memoryHistory");
 		if (history) {
 			history.innerHTML = '<div class="memoryEmptyHistory">' + (memory.data.formulas.length ? "今日没有待学习公式" : "请先规划学习公式") + '</div>';
@@ -349,7 +347,7 @@
 			return;
 		}
 		var text = solving ? "正在还原…<br>重新尝试：任意面转一周、按下 Backspace或点击此处" : "请开始还原…<br>点击此处显示答案。";
-		current.innerHTML = '<button id="memoryBackBtn" class="memoryBack" type="button" aria-label="返回上一公式" title="返回上一公式">↶</button><button id="memoryPrompt" class="memoryPrompt" type="button">' + text + '</button>';
+		current.innerHTML = '<button id="memoryBackBtn" class="memoryBack" type="button" aria-label="返回上一公式" title="返回上一公式"><span class="memoryBackChevron" aria-hidden="true"></span></button><button id="memoryPrompt" class="memoryPrompt" type="button">' + text + '</button>';
 	}
 
 	function optionLabels() {
@@ -397,9 +395,9 @@
 		var options = labels.map(function(label, index) {
 			return '<button class="memoryOption' + (index === memory.selectedRating ? ' isSelected' : '') + '" style="--memoryColor:' + RATING_COLORS[index] + '" type="button" data-memory-rating="' + index + '">' + app.escapeHtml(label) + '</button>';
 		}).join("");
-		current.innerHTML = '<button id="memoryBackBtn" class="memoryBack" type="button" aria-label="返回上一公式" title="返回上一公式">↶</button><div class="memoryAnswer"><strong class="memoryAnswerName">' + app.escapeHtml(memory.currentFormula.name) + '</strong><div class="memoryAnswerFormula">' + app.escapeHtml(memory.currentFormula.answer || memory.currentFormula.alg || "") + '</div></div>' +
+		current.innerHTML = '<button id="memoryBackBtn" class="memoryBack" type="button" aria-label="返回上一公式" title="返回上一公式"><span class="memoryBackChevron" aria-hidden="true"></span></button><div class="memoryAnswer"><strong class="memoryAnswerName">' + app.escapeHtml(memory.currentFormula.name) + '</strong><div class="memoryAnswerFormula">' + app.escapeHtml(memory.currentFormula.answer || memory.currentFormula.alg || "") + '</div></div>' +
 			'<div class="memoryTimes"><div class="memoryTime"><span>本次</span><strong>' + formatDuration(memory.solveTime) + '</strong></div><div class="memoryTime"><span>AO5</span><strong>' + stats[0] + '</strong></div><div class="memoryTime"><span>AO10</span><strong>' + stats[1] + '</strong></div><div class="memoryTime"><span>AO50</span><strong>' + stats[2] + '</strong></div></div>' +
-			'<p class="memoryControlHint">(R R\') 确认；D 右移；D\' 左移。</p><div class="memoryOptions">' + options + '</div><button id="memoryConfirmBtn" class="button memoryConfirm" type="button">确认选择</button>';
+			'<p class="memoryControlHint">(R R\') 确认；D 右移；D\' 左移。</p><div class="memoryOptions">' + options + '</div>';
 	}
 
 	function renderMemoryHistory() {
@@ -418,7 +416,8 @@
 		var due = dueDate(progress);
 		var scheduled = due ? studyDate(due.getTime()) : "";
 		var overdue = scheduled && scheduled < today ? daysBetween(scheduled, today) : 0;
-		blocks.push('<div class="memoryDay isStatus' + (overdue ? ' isOverdue' : '') + '"><strong>Day' + currentDay + (overdue ? '：逾期' + overdue + '天' : '') + '</strong></div>');
+		var statusLabel = overdue ? '逾期' + overdue + '天' : (isNewFormula(memory.currentFormula.id) ? '新学' : '复习');
+		blocks.push('<div class="memoryDay isStatus' + (overdue ? ' isOverdue' : '') + '" style="--dayColor:#5d4ea8"><strong>Day' + currentDay + '</strong><span>' + app.escapeHtml(statusLabel) + '</span></div>');
 		container.innerHTML = '<div class="memoryHistoryTitle">' + app.escapeHtml(memory.currentFormula.name) + ' · 历史</div><div class="memoryDayList">' + blocks.join("") + '</div>';
 		requestAnimationFrame(function() {
 			container.scrollTop = container.scrollHeight;
@@ -823,7 +822,7 @@
 
 	function openPlanDialog() {
 		var initial = joinPlanText(memory.data.planText, memory.pendingAutofill);
-		var overlay = createOverlay('<div class="memoryDialog" role="dialog" aria-modal="true"><div class="memoryDialogHeader"><strong>规划学习</strong><button class="button secondary small" type="button" data-memory-close>关闭</button></div><p>每行或连续文本均可，沿用 TXT 的“名称：公式;”格式；重复公式会原样保留。</p><textarea id="memoryPlanTextarea" class="memoryPlanTextarea" spellcheck="false"></textarea><div class="memoryDialogActions"><button class="button secondary" type="button" data-memory-close>取消</button><button id="memorySavePlanBtn" class="button" type="button">保存计划</button></div></div>');
+		var overlay = createOverlay('<div class="memoryDialog" role="dialog" aria-modal="true"><div class="memoryDialogHeader"><strong>规划学习</strong><button class="button secondary small" type="button" data-memory-close>关闭</button></div><p>每行或连续文本均可，沿用 TXT 的\u201c名称：公式;\u201d格式；重复公式会原样保留。</p><textarea id="memoryPlanTextarea" class="memoryPlanTextarea" spellcheck="false"></textarea><div class="memoryDialogBottom"><label class="memoryDailyLabel">每日公式数 <input id="memoryDailyCount" class="memoryDailyInput" type="number" min="1" max="999" value="' + (memory.data.settings.dailyCount || 10) + '"></label><span id="memoryPlanCount" class="memoryPlanCount">[0]/[' + (memory.data.settings.dailyCount || 10) + ']</span></div><div class="memoryDialogActions"><button class="button secondary" type="button" data-memory-close>取消</button><button id="memorySavePlanBtn" class="button" type="button">保存计划</button></div></div>');
 		var textarea = overlay.querySelector("#memoryPlanTextarea");
 		textarea.value = initial;
 		overlay.querySelector("#memorySavePlanBtn").addEventListener("click", function() {
@@ -832,6 +831,12 @@
 				closeOverlay(overlay);
 			}
 		});
+		overlay.querySelector("#memoryDailyCount").addEventListener("change", function(event) {
+			memory.data.settings.dailyCount = Math.max(1, Math.min(999, Math.round(Number(event.target.value) || 10)));
+			saveData();
+			updatePlanCounter();
+		});
+		updatePlanCounter();
 		requestAnimationFrame(function() { textarea.focus(); });
 	}
 
@@ -937,9 +942,6 @@
 			var rating = event.target.closest("[data-memory-rating]");
 			if (rating) {
 				selectRating(Number(rating.getAttribute("data-memory-rating")), true);
-				return;
-			}
-			if (event.target.closest("#memoryConfirmBtn")) {
 				confirmRating();
 				return;
 			}
@@ -978,12 +980,6 @@
 				importButton.classList.remove("memoryDropActive");
 				if (type === "drop") importFile(event.dataTransfer && event.dataTransfer.files[0]);
 			});
-		});
-		root.querySelector("#memoryDailyCount").addEventListener("change", function(event) {
-			memory.data.settings.dailyCount = Math.max(1, Math.min(999, Math.round(Number(event.target.value) || 10)));
-			memory.data.queue = [];
-			saveData();
-			startMemoryMode();
 		});
 		updatePlanCounter();
 	}
@@ -1075,7 +1071,25 @@
 			event.stopImmediatePropagation();
 			return;
 		}
-		if (app.currentMode !== "memory" || event.key !== "Backspace" || /INPUT|TEXTAREA/.test(event.target && event.target.tagName || "")) {
+		if (app.currentMode !== "memory" || /INPUT|TEXTAREA/.test(event.target && event.target.tagName || "")) {
+			return;
+		}
+		if (memory.state === "answer" && event.key === "ArrowLeft") {
+			event.preventDefault();
+			selectRating((memory.selectedRating + 3) % 4, true);
+			return;
+		}
+		if (memory.state === "answer" && event.key === "ArrowRight") {
+			event.preventDefault();
+			selectRating((memory.selectedRating + 1) % 4, true);
+			return;
+		}
+		if (memory.state === "answer" && event.key === "Enter") {
+			event.preventDefault();
+			confirmRating();
+			return;
+		}
+		if (event.key !== "Backspace") {
 			return;
 		}
 		event.preventDefault();
