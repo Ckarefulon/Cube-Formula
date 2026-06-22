@@ -61,7 +61,6 @@ jobs:
 
           version = os.environ['VERSION']
           prev_version = os.environ.get('PREV_VERSION', '')
-          current_mm = '.'.join(version.split('.')[:2])
 
           with open('Changelog.md', 'r', encoding='utf-8') as f:
               content = f.read()
@@ -74,15 +73,28 @@ jobs:
               if m:
                   sections.append((m.group(1), part))
 
-          # 收集同主次版本的版本记录（当前版本为文件中的最新版）
-          target_sections = []
-          for ver, body in sections:
-              vm = '.'.join(ver.split('.')[:2])
-              if vm == current_mm:
-                  target_sections.append((ver, body))
+          # 找到当前版本与上一版本在 sections 中的索引（列表顺序与 Changelog.md 一致：从新到旧）
+          current_idx = None
+          prev_idx = None
+          for i, (ver, _) in enumerate(sections):
+              if ver == version:
+                  current_idx = i
+              if prev_version and ver == prev_version:
+                  prev_idx = i
 
-          # 按旧到新排序
-          target_sections.reverse()
+          if current_idx is None:
+              print(f"未在 Changelog.md 中找到当前版本 {version}")
+              exit(1)
+
+          # 收集当前版本（包含）到上一版本（不包含）之间的所有版本条目
+          if prev_version and prev_idx is not None:
+              target_sections = sections[current_idx:prev_idx]
+          else:
+              # 上一版本缺失或不在 Changelog.md 中：取从开头到当前版本为止的全部条目
+              target_sections = sections[:current_idx + 1]
+
+          # 按旧到新排序展示
+          target_sections = list(reversed(target_sections))
 
           # 解析各版本的变更类型与条目
           type_items = OrderedDict()
