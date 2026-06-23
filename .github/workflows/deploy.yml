@@ -48,6 +48,7 @@ jobs:
           rsync -av \
             --exclude='.*' \
             --exclude='favicon.svg' \
+            --exclude='README.md' \
             --exclude='target-repo' \
             ./ "$TARGET_DIR/"
 
