@@ -138,7 +138,9 @@ jobs:
                           f.write(f'- {item}\n')
                       f.write('\n')
               f.write('---\n\n')
-              f.write('详情请见 [更新日志](Changelog.md)\n')
+              server = os.environ.get('GITHUB_SERVER_URL', 'https://github.com')
+              repo = os.environ['GITHUB_REPOSITORY']
+              f.write(f'详情请见 [更新日志]({server}/{repo}/blob/main/Changelog.md)\n')
           PY
 
       - name: 创建或更新当前 Release
