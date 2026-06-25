@@ -37,18 +37,13 @@ jobs:
           else
             TARGET_DIR="target-repo/Cube/Formula"
           fi
-
-          # 创建目标目录（如果不存在）
           mkdir -p "$TARGET_DIR"
-
-          # 删除目标目录中的所有文件（保留 .git 目录）
           find "$TARGET_DIR" -mindepth 1 -not -name '.git' -exec rm -rf {} + 2>/dev/null || true
-
-          # 复制本仓库文件到目标目录，排除 . 开头的文件夹和 favicon.svg
           rsync -av \
             --exclude='.*' \
-            --exclude='favicon.svg' \
-            --exclude='README.md' \
+            --exclude='/nav' \
+            --exclude='/favicon.svg' \
+            --exclude='/README.md' \
             --exclude='target-repo' \
             ./ "$TARGET_DIR/"
 
