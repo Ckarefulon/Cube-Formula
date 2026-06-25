@@ -24,7 +24,7 @@
 		'			<button id="siteAvatar" class="siteAvatar" type="button">?</button>',
 		'			<div id="accountMenu" class="accountMenu">',
 		'				<div class="accountMenuEmail" id="accountMenuEmail"></div>',
-		'				<div class="accountMenuScope">站点作用域：Cube-Formula</div>',
+		'				<div class="accountMenuScope" id="accountMenuScope"></div>',
 		'				<div class="accountMenuCloud" id="accountMenuCloud">',
 		'					<div class="accountMenuDivider"></div>',
 		'					<div class="accountMenuCloudTitle">云端数据</div>',
@@ -246,6 +246,12 @@
 					window.authManager.signOut();
 				}
 			});
+		}
+
+		var accountMenuScope = document.getElementById("accountMenuScope");
+		if (accountMenuScope) {
+			var currentScope = window.getCurrentSiteScope ? window.getCurrentSiteScope() : "Cube-Formula";
+			accountMenuScope.textContent = "站点作用域：" + currentScope;
 		}
 
 		var cloudStatusEl = document.getElementById("cloudStatus");
