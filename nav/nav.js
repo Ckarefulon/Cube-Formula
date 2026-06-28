@@ -1,6 +1,19 @@
 (function() {
 	"use strict";
 
+	function detectSiteScope() {
+		if (window.getCurrentSiteScope) {
+			return window.getCurrentSiteScope();
+		}
+		var path = window.location.pathname || "/";
+		var segments = path.split("/").filter(function(s) { return s && s !== "index.html"; });
+		if (segments.length === 0) {
+			return "home";
+		}
+		var scopeSegments = segments.slice(0, 2);
+		return scopeSegments.join("-");
+	}
+
 	var NAV_HTML = [
 		'<header class="siteHeader">',
 		'	<div class="siteHeaderLeft">',
@@ -21,10 +34,11 @@
 		'			</div>',
 		'		</div>',
 		'		<div class="guestEntry" id="userEntry" style="display:none">',
-		'			<button id="siteAvatar" class="siteAvatar" type="button">?</button>',
+		'			<button id="siteAvatar" class="siteAvatar" type="button"><img id="siteAvatarImage" class="siteAvatarImage" alt="" hidden><span id="siteAvatarFallback">?</span></button>',
 		'			<div id="accountMenu" class="accountMenu">',
 		'				<div class="accountMenuEmail" id="accountMenuEmail"></div>',
 		'				<div class="accountMenuScope" id="accountMenuScope"></div>',
+		'				<button id="siteProfileBtn" class="siteHeaderBtn accountMenuProfileBtn" type="button">个人资料</button>',
 		'				<div class="accountMenuCloud" id="accountMenuCloud">',
 		'					<div class="accountMenuDivider"></div>',
 		'					<div class="accountMenuCloudTitle">云端数据</div>',
@@ -47,8 +61,8 @@
 		'			<button class="loginPanelClose" id="loginPanelClose" type="button" title="关闭">&times;</button>',
 		'		</div>',
 		'		<div class="loginField">',
-		'			<label for="loginEmail">邮箱</label>',
-		'			<input type="email" id="loginEmail" placeholder="请输入邮箱" autocomplete="email">',
+		'			<label for="loginAccount">邮箱 / 用户名</label>',
+		'			<input type="text" id="loginAccount" placeholder="请输入邮箱或用户名" autocomplete="username" autocapitalize="off" spellcheck="false">',
 		'		</div>',
 		'		<div class="loginField">',
 		'			<label for="loginPassword">密码</label>',
@@ -99,7 +113,7 @@
 		}
 
 		var loginOverlay = document.getElementById("loginOverlay");
-		var loginEmail = document.getElementById("loginEmail");
+		var loginAccount = document.getElementById("loginAccount");
 		var loginPassword = document.getElementById("loginPassword");
 		var loginStatus = document.getElementById("loginStatus");
 		var loginSubmitBtn = document.getElementById("loginSubmitBtn");
@@ -109,9 +123,9 @@
 		function openLoginPanel() {
 			if (loginOverlay) { loginOverlay.classList.add("isVisible"); }
 			if (loginStatus) { loginStatus.textContent = ""; loginStatus.className = "loginStatus"; }
-			if (loginEmail) { loginEmail.value = ""; }
+			if (loginAccount) { loginAccount.value = ""; }
 			if (loginPassword) { loginPassword.value = ""; }
-			if (loginEmail) { setTimeout(function() { loginEmail.focus(); }, 100); }
+			if (loginAccount) { setTimeout(function() { loginAccount.focus(); }, 100); }
 		}
 
 		function closeLoginPanel() {
@@ -125,24 +139,40 @@
 		}
 
 		function doAuth(action) {
-			var email = (loginEmail && loginEmail.value || "").trim();
+			var account = (loginAccount && loginAccount.value || "").trim();
 			var password = loginPassword && loginPassword.value || "";
-			if (!email || !password) {
-				setLoginStatus("请输入邮箱和密码", "Error");
+			if (!account || !password) {
+				setLoginStatus(action === "signUp" ? "请输入邮箱和密码" : "请输入账号和密码", "Error");
 				return;
 			}
 			if (!window.authManager) {
 				setLoginStatus("Supabase 配置未完成", "Error");
 				return;
 			}
+			if (action === "signUp" && account.indexOf("@") < 0) {
+				setLoginStatus("注册请使用邮箱地址", "Error");
+				return;
+			}
 			setLoginStatus("请稍候...", "");
-			var method = action === "signUp" ? "signUp" : "signIn";
-			window.authManager[method](email, password).then(function(result) {
-				setLoginStatus(result.message, result.success ? "Success" : "Error");
-				if (result.success) {
-					setTimeout(closeLoginPanel, 1500);
-				}
-			});
+			if (action === "signUp") {
+				window.authManager.signUp(account, password).then(function(result) {
+					setLoginStatus(result.message, result.success ? "Success" : "Error");
+					if (result.success) {
+						setTimeout(closeLoginPanel, 1500);
+					}
+				});
+			} else {
+				var isEmail = account.indexOf("@") >= 0;
+				var loginPromise = isEmail
+					? window.authManager.signIn(account, password)
+					: window.authManager.signInWithUsername(account, password);
+				loginPromise.then(function(result) {
+					setLoginStatus(result.message, result.success ? "Success" : "Error");
+					if (result.success) {
+						setTimeout(closeLoginPanel, 1000);
+					}
+				});
+			}
 		}
 
 		if (loginSubmitBtn) {
@@ -206,7 +236,13 @@
 		var avatar = document.getElementById("siteAvatar");
 		var accountMenu = document.getElementById("accountMenu");
 		var signOutBtn = document.getElementById("siteSignOutBtn");
+		var profileBtn = document.getElementById("siteProfileBtn");
 		var accountHideTimer = null;
+		var touchOpened = false;
+
+		function goToProfile() {
+			window.location.href = "/user/profile/";
+		}
 
 		function showAccountMenu() {
 			if (accountHideTimer) { clearTimeout(accountHideTimer); accountHideTimer = null; }
@@ -216,6 +252,7 @@
 		function hideAccountMenu() {
 			accountHideTimer = setTimeout(function() {
 				if (accountMenu) { accountMenu.classList.remove("isVisible"); }
+				touchOpened = false;
 			}, 200);
 		}
 
@@ -225,20 +262,47 @@
 
 		if (avatar) {
 			avatar.addEventListener("click", function() {
-				if (accountMenu && accountMenu.classList.contains("isVisible")) {
-					hideAccountMenu();
-				} else {
+				if (touchOpened) {
+					touchOpened = false;
+					showAccountMenu();
+					return;
+				}
+				goToProfile();
+			});
+			avatar.addEventListener("mouseenter", function() {
+				if (!touchOpened) {
 					showAccountMenu();
 				}
 			});
-			avatar.addEventListener("mouseenter", showAccountMenu);
 			avatar.addEventListener("mouseleave", hideAccountMenu);
+			avatar.addEventListener("touchstart", function(e) {
+				touchOpened = true;
+			}, { passive: true });
+		}
+
+		if (profileBtn) {
+			profileBtn.addEventListener("click", function(e) {
+				e.stopPropagation();
+				goToProfile();
+			});
 		}
 
 		if (accountMenu) {
 			accountMenu.addEventListener("mouseenter", cancelAccountHide);
 			accountMenu.addEventListener("mouseleave", hideAccountMenu);
+			accountMenu.addEventListener("click", function(e) {
+				e.stopPropagation();
+			});
 		}
+
+		document.addEventListener("click", function(e) {
+			if (accountMenu && accountMenu.classList.contains("isVisible")) {
+				if (e.target !== avatar && !accountMenu.contains(e.target)) {
+					accountMenu.classList.remove("isVisible");
+					touchOpened = false;
+				}
+			}
+		});
 
 		if (signOutBtn) {
 			signOutBtn.addEventListener("click", function() {
@@ -250,7 +314,7 @@
 
 		var accountMenuScope = document.getElementById("accountMenuScope");
 		if (accountMenuScope) {
-			var currentScope = window.getCurrentSiteScope ? window.getCurrentSiteScope() : "Cube-Formula";
+			var currentScope = detectSiteScope();
 			accountMenuScope.textContent = "站点作用域：" + currentScope;
 		}
 
@@ -363,26 +427,91 @@
 			});
 		}
 
+		var _currentProfile = null;
+		var _profileListenerBound = false;
+		var _currentAuthUser = null;
+
+		function updateMenuDisplay(profile) {
+			var nameEl = document.getElementById("accountMenuEmail");
+			var avatarEl = document.getElementById("siteAvatar");
+			var imageEl = document.getElementById("siteAvatarImage");
+			var fallbackEl = document.getElementById("siteAvatarFallback");
+			var user = _currentAuthUser;
+			if (!nameEl || !user) return;
+			var username = profile && profile.username ? profile.username : null;
+			var displayName = username || user.email || "";
+			nameEl.textContent = displayName;
+			var initial = displayName ? displayName.charAt(0).toUpperCase() : "?";
+			if (fallbackEl) {
+				fallbackEl.textContent = initial;
+				fallbackEl.hidden = false;
+			}
+			if (avatarEl) {
+				avatarEl.title = displayName;
+			}
+			var avatarUrl = profile && profile.avatar_path && window.profileManager
+				? window.profileManager.getAvatarUrl(profile.avatar_path, profile.updated_at)
+				: null;
+			if (!imageEl) return;
+			if (!avatarUrl) {
+				imageEl.dataset.avatarUrl = "";
+				imageEl.hidden = true;
+				imageEl.removeAttribute("src");
+				return;
+			}
+			imageEl.dataset.avatarUrl = avatarUrl;
+			imageEl.hidden = true;
+			imageEl.onload = function() {
+				if (imageEl.dataset.avatarUrl !== avatarUrl) return;
+				imageEl.hidden = false;
+				if (fallbackEl) fallbackEl.hidden = true;
+			};
+			imageEl.onerror = function() {
+				if (imageEl.dataset.avatarUrl !== avatarUrl) return;
+				imageEl.hidden = true;
+				if (fallbackEl) fallbackEl.hidden = false;
+			};
+			imageEl.src = avatarUrl;
+		}
+
+		function fetchAndDisplayProfile() {
+			var user = _currentAuthUser;
+			if (!user) {
+				_currentProfile = null;
+				return;
+			}
+			if (window.profileManager && typeof window.profileManager.getOwnProfile === "function") {
+				if (!_profileListenerBound && typeof window.profileManager.onProfileChange === "function") {
+					_profileListenerBound = true;
+					window.profileManager.onProfileChange(function(profile) {
+						_currentProfile = profile || null;
+						updateMenuDisplay(_currentProfile);
+					});
+				}
+				window.profileManager.getOwnProfile().then(function(result) {
+					_currentProfile = result.success ? result.profile : null;
+					updateMenuDisplay(_currentProfile);
+				});
+			} else {
+				_currentProfile = null;
+				updateMenuDisplay(null);
+			}
+		}
+
 		function updateAuthUI(user) {
 			var guestEntry = document.getElementById("guestEntry");
 			var userEntry = document.getElementById("userEntry");
-			var avatarEl = document.getElementById("siteAvatar");
-			var accountMenuEmail = document.getElementById("accountMenuEmail");
+			_currentAuthUser = user;
 
 			if (user) {
 				if (guestEntry) { guestEntry.style.display = "none"; }
 				if (userEntry) { userEntry.style.display = ""; }
-				if (avatarEl) {
-					var email = user.email || "";
-					avatarEl.textContent = email.charAt(0).toUpperCase() || "?";
-					avatarEl.title = email;
-				}
-				if (accountMenuEmail) {
-					accountMenuEmail.textContent = user.email || "";
-				}
+				updateMenuDisplay(null);
+				fetchAndDisplayProfile();
 			} else {
 				if (guestEntry) { guestEntry.style.display = ""; }
 				if (userEntry) { userEntry.style.display = "none"; }
+				_currentProfile = null;
 			}
 		}
 
