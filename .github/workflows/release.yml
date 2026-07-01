@@ -5,7 +5,8 @@ on:
     branches:
       - main
     paths:
-      - 'Changelog.md'
+      - 'Cube/Formula/Beta/Changelog.md'
+      - 'Cube/Formula/Changelog.md'
 
 jobs:
   release:
@@ -17,14 +18,25 @@ jobs:
       - name: 拉取代码
         uses: actions/checkout@v5
 
+      - name: 确定 Changelog 路径
+        id: changelog_path
+        run: |
+          if [ -f "Cube/Formula/Beta/Changelog.md" ]; then
+            CHANGELOG="Cube/Formula/Beta/Changelog.md"
+          else
+            CHANGELOG="Cube/Formula/Changelog.md"
+          fi
+          echo "CHANGELOG_PATH=$CHANGELOG" >> $GITHUB_ENV
+          echo "使用 Changelog: $CHANGELOG"
+
       - name: 提取最新版本号及上一版本号
         id: get_version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION=$(sed -nE 's/^## \[([0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?)\].*/\1/p' Changelog.md | head -n 1)
+          VERSION=$(sed -nE 's/^## \[([0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?)\].*/\1/p' "$CHANGELOG_PATH" | head -n 1)
           if [ -z "$VERSION" ]; then
-            echo "没有在 Changelog.md 中找到版本号"
+            echo "没有在 $CHANGELOG_PATH 中找到版本号"
             exit 1
           fi
 
@@ -61,8 +73,9 @@ jobs:
 
           version = os.environ['VERSION']
           prev_version = os.environ.get('PREV_VERSION', '')
+          changelog_path = os.environ['CHANGELOG_PATH']
 
-          with open('Changelog.md', 'r', encoding='utf-8') as f:
+          with open(changelog_path, 'r', encoding='utf-8') as f:
               content = f.read()
 
           # 按版本标题切分，忽略第一个部分（Unreleased 之前的内容）
@@ -83,14 +96,14 @@ jobs:
                   prev_idx = i
 
           if current_idx is None:
-              print(f"未在 Changelog.md 中找到当前版本 {version}")
+              print(f"未在 {changelog_path} 中找到当前版本 {version}")
               exit(1)
 
           # 收集当前版本（包含）到上一版本（不包含）之间的所有版本条目
           if prev_version and prev_idx is not None:
               target_sections = sections[current_idx:prev_idx]
           else:
-              # 上一版本缺失或不在 Changelog.md 中：取从开头到当前版本为止的全部条目
+              # 上一版本缺失或不在 changelog 中：取从开头到当前版本为止的全部条目
               target_sections = sections[:current_idx + 1]
 
           # 按旧到新排序展示
@@ -140,7 +153,7 @@ jobs:
               f.write('---\n\n')
               server = os.environ.get('GITHUB_SERVER_URL', 'https://github.com')
               repo = os.environ['GITHUB_REPOSITORY']
-              f.write(f'详情请见 [更新日志]({server}/{repo}/blob/main/Changelog.md)\n')
+              f.write(f'详情请见 [更新日志]({server}/{repo}/blob/main/{changelog_path})\n')
           PY
 
       - name: 创建或更新当前 Release
